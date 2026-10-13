@@ -6,8 +6,7 @@ NDUS_COOKIE = os.getenv('NDUS_COOKIE')
 TMDB_API_KEY = "49fb1307dfa80e6b65c947be30a399e8"
 
 def clean_movie_name(filename):
-    # ফাইলের নাম থেকে এক্সটেনশন এবং অতিরিক্ত রেজ্যুলেশন ট্যাগ সরিয়ে পরিষ্কার নাম বের করা
-    name = re.sub(r'\.\w+$', '', filename) # .mp4, .mkv ইত্যাদি রিমোভ
+    name = re.sub(r'\.\w+$', '', filename)
     name = re.sub(r'(1080p|720p|4K|HDRip|WEB-DL|BluRay|BRRip|x264|x265|HEVC).*', '', name, flags=re.IGNORECASE)
     name = name.replace('.', ' ').replace('_', ' ').strip()
     return name
@@ -16,7 +15,7 @@ def get_tmdb_poster(movie_title):
     try:
         clean_title = clean_movie_name(movie_title)
         url = f"https://api.themoviedb.org/3/search/movie?api_key={TMDB_API_KEY}&query={requests.utils.quote(clean_title)}"
-        response = requests.get(url)
+        response = requests.get(url, timeout=10)
         data = response.json()
         
         if data.get('results'):
@@ -26,20 +25,21 @@ def get_tmdb_poster(movie_title):
     except Exception as e:
         print(f"Poster fetch error for {movie_title}: {e}")
     
-    # পোস্টার না পেলে ডিফল্ট ইমেজ
     return "https://via.placeholder.com/300x450.png?text=Movie"
 
 def fetch_terabox_movies():
+    clean_cookie = NDUS_COOKIE.replace("ndus=", "").strip() if NDUS_COOKIE else ""
+    
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Cookie': f'ndus={NDUS_COOKIE};'
+        'Cookie': f'ndus={clean_cookie};'
     }
     
     api_url = "https://www.terabox.com/api/list?dir=%2F&page=1&num=100"
     m3u_content = "#EXTM3U\n"
     
     try:
-        response = requests.get(api_url, headers=headers)
+        response = requests.get(api_url, headers=headers, timeout=15)
         data = response.json()
         
         if data.get('errno') == 0:
@@ -49,7 +49,6 @@ def fetch_terabox_movies():
                     filename = item.get('server_filename', 'Movie')
                     dlink = item.get('dlink', '')
                     
-                    # TMDB থেকে আসল পোস্টার ফেচ করা
                     poster_url = get_tmdb_poster(filename)
                     group = "Terabox Movies"
                     

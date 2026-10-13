@@ -1,0 +1,36 @@
+name: Auto Update Terabox M3U
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # প্রতিদিন রাত ১২টায় অটোমেটিক চলবে
+  workflow_dispatch:      # গিটহাব থেকে ম্যানুয়ালি রান করার অপশন
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests
+
+      - name: Run Auto Generator Script
+        env:
+          NDUS_COOKIE: ${{ secrets.NDUS_COOKIE }}
+        run: python auto_m3u.py
+
+      - name: Commit and Push Changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add playlist.m3u
+          git diff-index --quiet HEAD || git commit -m "Auto update playlist" -a
+          git push
